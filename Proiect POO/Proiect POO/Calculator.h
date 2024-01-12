@@ -1,12 +1,10 @@
-#pragma once
+#ifndef CALCULATOR_H
+#define CALCULATOR_H
 
-#include "Numar.h"
 #include "Paranteze.h"
+#include "Numar.h"
 #include <vector>
 #include <stack>
-#include <cctype>
-#include <stdexcept>
-
 
 class Calculator {
 private:
@@ -19,19 +17,19 @@ private:
     static const Paranteze PARANTEZE_PATRATICE;
 
     bool esteOperator(char c) const;
-    bool esteDeschidereParanteza(char c) const;
-    bool esteInchidereParanteza(char c) const;
-
-    int getPrecedentaParanteza(char c) const;
-
-    int getPrecedentaOperator(char c) const;
-
     void gestioneazaNumar(const std::string& expresie, int& i);
-
     void gestioneazaOperator(const std::string& expresie, int& i);
+    void gestioneazaParanteza(const std::string& expresie, int& i);
+    int getPrecedentaParanteza(char c) const;
+    int getPrecedentaOperator(char c) const;
+    std::string convertInfixToPostfix(const std::string& infix);
 
 public:
     Calculator();
-
     Numar calculeazaExpresie(const std::string& expresie);
+    void saveResultToFile(const std::string& filename);
+    void loadEquationsFromFile(const std::string& filename);
+    void printMenu();
 };
+
+#endif 

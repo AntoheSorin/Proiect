@@ -1,201 +1,210 @@
+﻿#include "Calculator.h"
 #include <iostream>
-#include <string>
-#include <stdexcept>
-#include "Calculator.h"
-#include "Numar.h"
-#include "Paranteze.h"
-    
-    const Paranteze Calculator::PARANTEZE_ROTUNDE = Paranteze('(', ')', 0);
-    const Paranteze Calculator::PARANTEZE_PATRATICE = Paranteze('[', ']', 0);
+#include <sstream>
+#include <cctype>
+#include <fstream> // Adăugat pentru std::ofstream și std::ifstream
 
-    bool Calculator::esteOperator(char c) const {
-        return (c == '+') || (c == '-') || (c == '*') || (c == '/') || (c == '^') || (c == '#');
+const Paranteze Calculator::PARANTEZE_ROTUNDE = Paranteze('(', ')', 0);
+const Paranteze Calculator::PARANTEZE_PATRATICE = Paranteze('[', ']', 0);
+
+bool Calculator::esteOperator(char c) const {
+    return (c == '+') || (c == '-') || (c == '*') || (c == '/');
+}
+
+void Calculator::gestioneazaNumar(const std::string& expresie, int& i) {
+    int j = i;
+    while (j < expresie.length() && (std::isdigit(expresie[j]) || expresie[j] == '.')) {
+        j++;
     }
-
-    bool Calculator::esteDeschidereParanteza(char c) const {
-        return (c == PARANTEZE_ROTUNDE.getDeschidereCaracter()) || (c == PARANTEZE_PATRATICE.getDeschidereCaracter());
+    if (j > i) {
+        Numar number(std::stod(expresie.substr(i, j - i)));
+        numere.push_back(number);
+        i = j;
     }
+}
 
-    bool Calculator::esteInchidereParanteza(char c) const {
-        return (c == PARANTEZE_ROTUNDE.getInchidereCaracter()) || (c == PARANTEZE_PATRATICE.getInchidereCaracter());
-    }
-
-    int Calculator::getPrecedentaParanteza(char c) const {
-        if (esteDeschidereParanteza(c)) {
-            return 0;
-        }
-        else if (c == PARANTEZE_ROTUNDE.getInchidereCaracter()) {
-            return 1;
-        }
-        else if (c == PARANTEZE_PATRATICE.getInchidereCaracter()) {
-            return 2;
-        }
-        else {
-            throw std::invalid_argument("Paranteza invalida");
-        }
-    }
-
-    int Calculator::getPrecedentaOperator(char c) const {
-        if (c == '+') return 1;
-        if (c == '-') return 1;
-        if (c == '*') return 2;
-        if (c == '/') return 2;
-        if (c == '^') return 3;
-        if (c == '#') return 3;
+void Calculator::gestioneazaOperator(const std::string& expresie, int& i) {
+    if (i == 0 || expresie[i - 1] == ' ') {
         throw std::invalid_argument("Operator invalid");
     }
 
-    void Calculator::gestioneazaNumar(const std::string & expresie, int& i) {
-        int j = i;
-        while (j < expresie.length() && std::isdigit(expresie[j])) {
-            j++;
-        }
-        if (j > i) {
-            Numar number(std::stod(expresie.substr(i, j - i)));
-            numere.push_back(number);
-            i = j;
-        }
+    char c = expresie[i];
+    if (!esteOperator(c)) {
+        throw std::invalid_argument("Operator invalid");
     }
 
-    void Calculator::gestioneazaOperator(const std::string & expresie, int& i) {
-        char c = expresie[i];
-        if (!esteOperator(c)) {
-            throw std::invalid_argument("Operator invalid");
-        }
+    while (!stiva_paranteze.empty() && getPrecedentaParanteza(stiva_paranteze.top().getInchidereCaracter()) >= getPrecedentaOperator(c)) {
+        stiva_numere.push(numere.back());
+        numere.pop_back();
+        stiva_paranteze.pop();
+    }
 
-        while (!stiva_paranteze.empty() && getPrecedentaParanteza(stiva_paranteze.top().getInchidereCaracter()) > getPrecedentaOperator(c)) {
+    stiva_paranteze.push(Paranteze(' ', ' ', getPrecedentaOperator(c)));
+    i++;
+}
+
+void Calculator::gestioneazaParanteza(const std::string& expresie, int& i) {
+    char c = expresie[i];
+    if (c == '(' || c == '[') {
+        stiva_paranteze.push(Paranteze(c, ' ', getPrecedentaParanteza(c)));
+    }
+    else if (c == ')' || c == ']') {
+        while (!stiva_paranteze.empty() && stiva_paranteze.top().getDeschidereCaracter() != '(' && stiva_paranteze.top().getDeschidereCaracter() != '[') {
             stiva_numere.push(numere.back());
             numere.pop_back();
             stiva_paranteze.pop();
         }
 
-        stiva_paranteze.push(Paranteze(' ', ' ', getPrecedentaOperator(c)));
-        i++;
+        if (stiva_paranteze.empty() || stiva_paranteze.top().getDeschidereCaracter() != (c == ')' ? '(' : '[')) {
+            throw std::invalid_argument("Paranteze neasociate");
+        }
+
+        stiva_paranteze.pop();
     }
 
-    Numar Calculator::calculeazaExpresie(const std::string& expresie) {
-        numere.clear();
-        paranteze.clear();
-        stiva_numere = std::stack<Numar>();
-        stiva_paranteze = std::stack<Paranteze>();
+    i++;
+}
 
-        int i = 0;
-        while (i < expresie.length()) {
-            if (std::isspace(expresie[i])) {
-                i++;
-            }
-            else if (std::isdigit(expresie[i])) {
-                gestioneazaNumar(expresie, i);
-            }
-            else if (esteOperator(expresie[i])) {
-                gestioneazaOperator(expresie, i);
-            }
-            else if (esteDeschidereParanteza(expresie[i])) {
-                stiva_paranteze.push(Paranteze(expresie[i], ' ', getPrecedentaParanteza(expresie[i])));
-                i++;
-            }
-            else if (esteInchidereParanteza(expresie[i])) {
-                while (!stiva_paranteze.empty() && !esteDeschidereParanteza(stiva_paranteze.top().getDeschidereCaracter())) {
-                    stiva_numere.push(numere.back());
-                    numere.pop_back();
-                    stiva_paranteze.pop();
-                }
+int Calculator::getPrecedentaParanteza(char c) const {
+    if (c == PARANTEZE_ROTUNDE.getDeschidereCaracter()) {
+        return 1;
+    }
+    else if (c == PARANTEZE_PATRATICE.getDeschidereCaracter()) {
+        return 2;
+    }
+    else {
+        throw std::invalid_argument("Paranteza invalida");
+    }
+}
 
-                if (stiva_paranteze.empty() || stiva_paranteze.top().getDeschidereCaracter() != expresie[i]) {
-                    throw std::invalid_argument("Paranteze neasociate");
-                }
+int Calculator::getPrecedentaOperator(char c) const {
+    if (c == '+' || c == '-') return 1;
+    if (c == '*' || c == '/') return 2;
+    throw std::invalid_argument("Operator invalid");
+}
 
+std::string Calculator::convertInfixToPostfix(const std::string& infix) {
+    std::string postfix;
+    std::stack<Paranteze> stiva_paranteze;
+
+    for (int i = 0; i < infix.length(); i++) {
+        if (std::isdigit(infix[i]) || infix[i] == '.') {
+            postfix += infix[i];
+        }
+        else if (esteOperator(infix[i])) {
+            while (!stiva_paranteze.empty() && stiva_paranteze.top().getPrecedenta() >= getPrecedentaOperator(infix[i])) {
+                postfix += stiva_paranteze.top().getInchidereCaracter();
                 stiva_paranteze.pop();
-                i++;
             }
-            else {
-                throw std::invalid_argument("Caracter nevalid in expresie");
+
+            stiva_paranteze.push(Paranteze(' ', ' ', getPrecedentaOperator(infix[i])));
+        }
+        else if (infix[i] == '(' || infix[i] == '[') {
+            stiva_paranteze.push(Paranteze(infix[i], ' ', getPrecedentaParanteza(infix[i])));
+        }
+        else if (infix[i] == ')' || infix[i] == ']') {
+            while (!stiva_paranteze.empty() && stiva_paranteze.top().getDeschidereCaracter() != (infix[i] == ')' ? '(' : '[')) {
+                postfix += stiva_paranteze.top().getInchidereCaracter();
+                stiva_paranteze.pop();
+            }
+
+            if (!stiva_paranteze.empty() && stiva_paranteze.top().getDeschidereCaracter() == (infix[i] == ')' ? '(' : '[')) {
+                stiva_paranteze.pop();
             }
         }
-
-        while (!stiva_paranteze.empty()) {
-            if (esteDeschidereParanteza(stiva_paranteze.top().getDeschidereCaracter())) {
-                throw std::invalid_argument("Paranteze neinchise");
-            }
-
-            stiva_numere.push(numere.back());
-            numere.pop_back();
-            stiva_paranteze.pop();
+        else if (infix[i] == ' ') {
+            continue;
         }
+        else {
+            throw std::invalid_argument("Caracter invalid");
+        }
+    }
 
-        while (!stiva_numere.empty()) {
-            numere.push_back(stiva_numere.top());
+    while (!stiva_paranteze.empty()) {
+        postfix += stiva_paranteze.top().getInchidereCaracter();
+        stiva_paranteze.pop();
+    }
+
+    return postfix;
+}
+
+Calculator::Calculator() {}
+
+Numar Calculator::calculeazaExpresie(const std::string& expresie) {
+    std::string postfix = convertInfixToPostfix(expresie);
+
+    for (int i = 0; i < postfix.length(); i++) {
+        if (std::isdigit(postfix[i]) || postfix[i] == '.') {
+            Numar number(std::stod(postfix.substr(i, 1)));
+            stiva_numere.push(number);
+            i++;
+        }
+        else if (esteOperator(postfix[i])) {
+            Numar operand2 = stiva_numere.top();
             stiva_numere.pop();
-        }
 
-        std::stack<Numar> rezultat;
-        std::stack<char> operatori;
+            Numar operand1 = stiva_numere.top();
+            stiva_numere.pop();
 
-        for (const Numar& numar : numere) {
-            if (numar.esteIntreg()) {
-                rezultat.push(numar);
-            }
-            else {
-                while (!operatori.empty() && getPrecedentaOperator(operatori.top()) >= numar.getValoare()) {
-                    Numar operand2 = rezultat.top();
-                    rezultat.pop();
-
-                    Numar operand1 = rezultat.top();
-                    rezultat.pop();
-
-                    char op = operatori.top();
-                    operatori.pop();
-
-                    switch (op) {
-                    case '+':
-                        rezultat.push(operand1 + operand2);
-                        break;
-                    case '-':
-                        rezultat.push(operand1 - operand2);
-                        break;
-                    case '*':
-                        rezultat.push(operand1 * operand2);
-                        break;
-                    case '/':
-                        rezultat.push(operand1 / operand2);
-                        break;
-                    default:
-                        throw std::invalid_argument("Operator nevalid");
-                    }
-                }
-
-                operatori.push((char)numar.getValoare());
-            }
-        }
-
-        while (!operatori.empty()) {
-            Numar operand2 = rezultat.top();
-            rezultat.pop();
-
-            Numar operand1 = rezultat.top();
-            rezultat.pop();
-
-            char op = operatori.top();
-            operatori.pop();
-
-            switch (op) {
+            switch (postfix[i]) {
             case '+':
-                rezultat.push(operand1 + operand2);
+                stiva_numere.push(operand1 + operand2);
                 break;
             case '-':
-                rezultat.push(operand1 - operand2);
+                stiva_numere.push(operand1 - operand2);
                 break;
             case '*':
-                rezultat.push(operand1 * operand2);
+                stiva_numere.push(operand1 * operand2);
                 break;
             case '/':
-                rezultat.push(operand1 / operand2);
+                stiva_numere.push(operand1 / operand2);
                 break;
             default:
                 throw std::invalid_argument("Operator nevalid");
             }
         }
-
-        return rezultat.top();
     }
 
+    return stiva_numere.top();
+}
+
+void Calculator::saveResultToFile(const std::string& filename) {
+    std::ofstream ofs(filename, std::ios::app);
+    if (!ofs.is_open()) {
+        std::cerr << "Eroare la deschiderea fisierului " << filename << std::endl;
+        return;
+    }
+
+    ofs << stiva_numere.top() << std::endl;
+}
+
+void Calculator::loadEquationsFromFile(const std::string& filename) {
+    std::ifstream ifs(filename);
+    if (!ifs.is_open()) {
+        std::cerr << "Eroare la deschiderea fisierului " << filename << std::endl;
+        return;
+    }
+
+    std::string line;
+    while (std::getline(ifs, line)) {
+        std::istringstream iss(line);
+        Numar num;
+        iss >> num;
+
+        if (iss.fail()) {
+            std::cerr << "Eroare la parsarea liniei " << line << std::endl;
+            continue;
+        }
+
+        numere.push_back(num);
+    }
+}
+
+void Calculator::printMenu() {
+    std::cout << "Calculator Menu:\n";
+    std::cout << "1. Introducere expresie\n";
+    std::cout << "2. Salveaza rezultat curent\n";
+    std::cout << "3. Citeste ecuații din fișier\n";
+    std::cout << "4. Iesire\n";
+    std::cout << "Introduceti optiunea dvs: ";
+}

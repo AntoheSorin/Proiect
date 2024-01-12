@@ -1,6 +1,7 @@
 #include "Paranteze.h"
 
-Paranteze::Paranteze(char deschidere, char inchidere, int precedenta) : deschidere_caracter(deschidere), inchidere_caracter(inchidere), precedenta(precedenta) {}
+Paranteze::Paranteze(char deschidere, char inchidere, int precedenta)
+    : deschidere_caracter(deschidere), inchidere_caracter(inchidere), precedenta(precedenta) {}
 
 char Paranteze::getDeschidereCaracter() const {
     return deschidere_caracter;

@@ -1,4 +1,5 @@
 #include "Numar.h"
+#include <iostream>
 
 Numar::Numar() : este_intreg(true), valoare(0) {}
 

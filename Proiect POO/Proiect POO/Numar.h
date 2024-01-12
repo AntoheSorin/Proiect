@@ -1,4 +1,5 @@
-#pragma once
+#ifndef NUMAR_H
+#define NUMAR_H
 
 #include <iostream>
 
@@ -14,7 +15,6 @@ public:
 
     bool esteIntreg() const;
     double getValoare() const;
-
     void seteazaValoare(double d);
 
     Numar operator+(const Numar& altul) const;
@@ -25,3 +25,5 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const Numar& numar);
     friend std::istream& operator>>(std::istream& is, Numar& numar);
 };
+
+#endif 
